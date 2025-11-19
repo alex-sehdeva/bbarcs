@@ -119,3 +119,27 @@ def make_translation_recolor_example(
 
     return inp, grid_out
 
+def make_keep_largest_example(
+    rows: int = 6,
+    cols: int = 6,
+    bg: int = 0,
+) -> Tuple[Grid, Grid]:
+    """
+    Create a grid with 2–3 objects of different sizes and
+    output that keeps only the largest one.
+    """
+    grid_in = make_empty_grid(rows, cols, bg)
+
+    # Place a small object
+    place_block(grid_in, 0, 0, 1, 1, color=2)
+    # Place a medium object
+    place_block(grid_in, 0, cols - 2, 2, 2, color=3)
+    # Place a large object
+    place_block(grid_in, rows - 3, cols // 2 - 1, 3, 3, color=4)
+
+    # Output: only keep the largest object
+    grid_out = make_empty_grid(rows, cols, bg)
+    place_block(grid_out, rows - 3, cols // 2 - 1, 3, 3, color=4)
+
+    return grid_in, grid_out
+

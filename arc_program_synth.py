@@ -5,12 +5,11 @@ from dataclasses import dataclass, field
 from typing import List, Callable, Tuple
 
 from arc_rule_families import RuleFamily
-from arc_rules import Rule, TranslateAllObjects, RecolorObjects, CompositeRule
+from arc_rules import Rule, TranslateAllObjects, RecolorObjects, CompositeRule, KeepLargestObject
 from arc_graph_delta import IntersectedRuleSummary
 from arc_graph_core import extract_objects_from_grid
 
 Grid = List[List[int]]
-
 
 @dataclass
 class Program:
@@ -30,7 +29,7 @@ def generate_candidate_programs(summary: IntersectedRuleSummary) -> List[Program
     Generate a small set of candidate programs based on the intersected summary.
     This is *not* exhaustive; it’s a guided search.
     """
-    from arc_rules import TranslateAllObjects, RecolorObjects, CompositeRule
+    from arc_rules import TranslateAllObjects, RecolorObjects, CompositeRule, KeepLargestObject
 
     candidates: List[Program] = []
 
@@ -48,6 +47,9 @@ def generate_candidate_programs(summary: IntersectedRuleSummary) -> List[Program
     if summary.color_mapping:
         primitive_rules.append(RecolorObjects(summary.color_mapping))
 
+    # We don't have a symbolic signal for LARGEST_OBJECT yet, so
+    # the base generator does NOT include KeepLargestObject here.
+    # (We rely on GNN-guided generator instead.)
     # Fallback: no info → no primitives
     if not primitive_rules:
         return []
@@ -160,6 +162,11 @@ def generate_candidate_programs_guided(
     primitive_rules: List[Rule] = []
 
     active_fams_set = set(active_families)
+
+    # LARGEST_OBJECT primitive: we don't have a direct flag in summary yet,
+    # so we rely purely on the GNN prediction here.
+    if RuleFamily.LARGEST_OBJECT in active_fams_set:
+        primitive_rules.append(KeepLargestObject())
 
     # Translation primitive: require both a global_translation and GNN believing TRANSLATION
     if summary.global_translation is not None and RuleFamily.TRANSLATION in active_fams_set:

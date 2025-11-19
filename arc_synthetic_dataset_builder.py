@@ -5,6 +5,7 @@ from arc_synthetic_data import (
     make_translation_example,
     make_recolor_example,
     make_translation_recolor_example,
+    make_keep_largest_example,
 )
 
 Grid = List[List[int]]
@@ -13,6 +14,7 @@ def build_synthetic_training_pairs(
     n_translation: int = 50,
     n_recolor: int = 50,
     n_both: int = 50,
+    n_keep_largest: int = 50,
 ) -> List[Tuple[Grid, Grid]]:
     pairs: List[Tuple[Grid, Grid]] = []
 
@@ -24,6 +26,9 @@ def build_synthetic_training_pairs(
 
     for _ in range(n_both):
         pairs.append(make_translation_recolor_example())
+
+    for _ in range(n_keep_largest):
+        pairs.append(make_keep_largest_example())
 
     return pairs
 

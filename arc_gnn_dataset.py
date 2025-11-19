@@ -139,7 +139,7 @@ class ArcRuleFamilyDataset(InMemoryDataset):
             out_g = extract_objects_from_grid(out_grid)
 
             gd = compute_graph_delta(inp_g, out_g)
-            fams: Set[RuleFamily] = infer_rule_families_from_delta(gd)
+            fams: Set[RuleFamily] = infer_rule_families_from_delta(gd, inp_g, out_g)
             if not fams:
                 # Optionally skip examples where we can't infer any family yet
                 continue

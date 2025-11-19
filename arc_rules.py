@@ -119,4 +119,27 @@ def propose_rules_from_intersection(
     return CompositeRule(rules=rules)
 
 
+@dataclass
+class KeepLargestObject(Rule):
+    """
+    Remove all objects except the one with the largest area.
+    Ties: keep one arbitrarily (first encountered).
+    """
+    def apply(self, grid: Grid) -> Grid:
+        og = extract_objects_from_grid(grid)
+        if not og.objects:
+            return [row[:] for row in grid]
+
+        # find largest-area object
+        largest = max(og.objects.values(), key=lambda o: o.area)
+        bg = infer_background_color(grid)
+
+        n_rows = len(grid)
+        n_cols = len(grid[0]) if n_rows > 0 else 0
+        new_grid: Grid = [[bg for _ in range(n_cols)] for _ in range(n_rows)]
+
+        for (r, c) in largest.cells:
+            new_grid[r][c] = grid[r][c]
+
+        return new_grid
 
