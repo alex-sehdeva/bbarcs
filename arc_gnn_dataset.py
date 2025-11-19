@@ -4,11 +4,11 @@ from typing import Tuple, List, Dict, Set
 import torch
 from torch_geometric.data import Data
 
-# from arc_graph_core import ObjectGraph, GridObject
+from arc_graph_core import ObjectGraph, GridObject
 
 
 def _build_node_features(
-    objs: Dict[int, "GridObject"],
+    objs: Dict[int, GridObject],
     is_output_flag: int,
 ) -> Tuple[List[List[float]], List[int]]:
     """
@@ -46,8 +46,8 @@ def _fully_connect_indices(start: int, count: int) -> List[Tuple[int, int]]:
 
 
 def graphs_to_pyg_data(
-    input_graph: "ObjectGraph",
-    output_graph: "ObjectGraph",
+    input_graph: ObjectGraph,
+    output_graph: ObjectGraph,
     label_indices: List[int],
     num_families: int,
 ) -> Data:

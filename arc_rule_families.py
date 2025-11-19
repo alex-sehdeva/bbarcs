@@ -13,7 +13,7 @@ class RuleFamily(Enum):
 
 from arc_graph_delta import GraphDelta
 
-def infer_rule_families_from_delta(delta: "GraphDelta") -> Set[RuleFamily]:
+def infer_rule_families_from_delta(delta: GraphDelta) -> Set[RuleFamily]:
     """
     Heuristically label this example with coarse rule families,
     based on its symbolic RuleSummary.
@@ -34,4 +34,3 @@ def infer_rule_families_from_delta(delta: "GraphDelta") -> Set[RuleFamily]:
         fams.add(RuleFamily.OBJECT_COUNT_PRESERVING)
 
     return fams
-

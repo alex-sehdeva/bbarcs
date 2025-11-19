@@ -80,7 +80,7 @@ class CompositeRule(Rule):
 
 
 def propose_rules_from_intersection(
-    summary: "IntersectedRuleSummary",
+    summary: IntersectedRuleSummary,
 ) -> Rule:
     """
     Turn an IntersectedRuleSummary into a concrete Rule (or CompositeRule).

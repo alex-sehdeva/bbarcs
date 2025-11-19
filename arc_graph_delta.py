@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Tuple, List, Optional, Set
 
 # Assuming these come from your step-1 module:
-# from arc_graph_core import ObjectGraph, GridObject, Color
+from arc_graph_core import ObjectGraph, GridObject, Color
 
 
 Color = int  # keep consistent with core module
@@ -123,8 +123,8 @@ def match_objects_greedy(
         unmatched_input_ids
         unmatched_output_ids
     """
-    in_objs: Dict[int, "GridObject"] = input_graph.objects
-    out_objs: Dict[int, "GridObject"] = output_graph.objects
+    in_objs: Dict[int, GridObject] = input_graph.objects
+    out_objs: Dict[int, GridObject] = output_graph.objects
 
     # Precompute all pairwise costs
     candidates: List[Tuple[float, int, int]] = []
@@ -158,8 +158,8 @@ def match_objects_greedy(
 # ---------- Δ computation ----------
 
 def _compute_object_delta(
-    o_in: "GridObject",
-    o_out: "GridObject",
+    o_in: GridObject,
+    o_out: GridObject,
 ) -> ObjectDelta:
     # Translation using centroids
     r1, c1 = o_in.centroid
@@ -194,7 +194,6 @@ def _compute_object_delta(
         bbox_out=bbox_out,
     )
 
-
 def _summarize_rules(object_deltas: List[ObjectDelta], matches: List[ObjectMatch]) -> RuleSummary:
     summary = RuleSummary()
 
@@ -215,21 +214,29 @@ def _summarize_rules(object_deltas: List[ObjectDelta], matches: List[ObjectMatch
     if same_translation:
         summary.global_translation = base_tr
 
-    # --- Color mapping: check if a consistent color_in -> color_out mapping exists ---
-    color_map: Dict[Color, Color] = {}
+    # --- Color mapping: only for *actual* changes (color_in != color_out) ---
+    candidate_map: Dict[Color, Color] = {}
     consistent = True
     for od in object_deltas:
         if od.color_in is None or od.color_out is None:
             continue
-        if od.color_in in color_map:
-            if color_map[od.color_in] != od.color_out:
+
+        # Skip identity mappings; they’re just "color preserved"
+        if od.color_in == od.color_out:
+            continue
+
+        if od.color_in in candidate_map:
+            if candidate_map[od.color_in] != od.color_out:
                 consistent = False
                 break
         else:
-            color_map[od.color_in] = od.color_out
+            candidate_map[od.color_in] = od.color_out
 
-    if consistent:
-        summary.color_mapping = color_map
+    if consistent and candidate_map:
+        # Only store non-empty, non-identity mappings
+        summary.color_mapping = candidate_map
+    else:
+        summary.color_mapping = {}
 
     # --- Simple invariants ---
     # Object count preserved if no unmatched ids
@@ -240,10 +247,9 @@ def _summarize_rules(object_deltas: List[ObjectDelta], matches: List[ObjectMatch
 
     return summary
 
-
 def compute_graph_delta(
-    input_graph: "ObjectGraph",
-    output_graph: "ObjectGraph",
+    input_graph: ObjectGraph,
+    output_graph: ObjectGraph,
     max_match_cost: float = 9999.0,
 ) -> GraphDelta:
     """

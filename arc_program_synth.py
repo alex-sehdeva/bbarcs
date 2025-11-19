@@ -1,11 +1,13 @@
+
 # arc_program_synth.py
 
 from dataclasses import dataclass, field
 from typing import List, Callable, Tuple
 
-# from arc_rules import Rule, TranslateAllObjects, RecolorObjects, CompositeRule
-# from arc_graph_delta import IntersectedRuleSummary
-# from arc_graph_core import extract_objects_from_grid
+from arc_rule_families import RuleFamily
+from arc_rules import Rule, TranslateAllObjects, RecolorObjects, CompositeRule
+from arc_graph_delta import IntersectedRuleSummary
+from arc_graph_core import extract_objects_from_grid
 
 Grid = List[List[int]]
 
@@ -23,7 +25,7 @@ class Program:
             current = r.apply(current)
         return current
 
-def generate_candidate_programs(summary: "IntersectedRuleSummary") -> List[Program]:
+def generate_candidate_programs(summary: IntersectedRuleSummary) -> List[Program]:
     """
     Generate a small set of candidate programs based on the intersected summary.
     This is *not* exhaustive; it’s a guided search.
@@ -77,19 +79,18 @@ def grids_equal(g1: Grid, g2: Grid) -> bool:
                 return False
     return True
 
-
 def find_consistent_program(
-    training_pairs: List[Tuple[Grid, Grid]],
-    summary: "IntersectedRuleSummary",
-) -> Tuple[Program, List[Program]]:
+    training_pairs: list[tuple[list[list[int]], list[list[int]]]],
+    summary: IntersectedRuleSummary,
+    candidates: list[Program] = None,
+) -> tuple[Program | None, list[Program]]:
     """
     Search for a small program that is consistent with all training examples.
-    Returns:
-      (best_program, all_consistent_programs)
-
-    If no program is found, best_program will be None.
+    If 'candidates' is provided, search over that; otherwise generate from summary.
     """
-    candidates = generate_candidate_programs(summary)
+    if candidates is None:
+        candidates = generate_candidate_programs(summary)
+
     consistent: List[Program] = []
 
     for prog in candidates:
@@ -105,7 +106,6 @@ def find_consistent_program(
     if not consistent:
         return None, []
 
-    # Simple minimality criterion: prefer fewer rules
     best = min(consistent, key=lambda p: len(p.rules))
     return best, consistent
 
@@ -146,3 +146,45 @@ def solve_arc_task_with_program_synth(training_pairs, test_grids):
     predictions = [best_prog.apply(g) for g in test_grids]
     return predictions, best_prog, intersected
 
+
+def generate_candidate_programs_guided(
+    summary: IntersectedRuleSummary,
+    active_families: list[RuleFamily],
+) -> List[Program]:
+    """
+    Like generate_candidate_programs, but only uses primitives that are:
+      - supported by the symbolic summary
+      - AND predicted active by the GNN (active_families).
+    """
+    candidates: List[Program] = []
+    primitive_rules: List[Rule] = []
+
+    active_fams_set = set(active_families)
+
+    # Translation primitive: require both a global_translation and GNN believing TRANSLATION
+    if summary.global_translation is not None and RuleFamily.TRANSLATION in active_fams_set:
+        dr, dc = summary.global_translation
+        dr_int = int(round(dr))
+        dc_int = int(round(dc))
+        primitive_rules.append(TranslateAllObjects(dr_int, dc_int))
+
+    # Recolor primitive: require color_mapping and GNN believing RECOLOR
+    if summary.color_mapping and RuleFamily.RECOLOR in active_fams_set:
+        primitive_rules.append(RecolorObjects(summary.color_mapping))
+
+    if not primitive_rules:
+        # If nothing survives, fall back to unguided generator (symbolic-only)
+        return generate_candidate_programs(summary)
+
+    # Single-rule programs
+    for r in primitive_rules:
+        candidates.append(Program(rules=[r]))
+
+    # Two-rule programs (ordered pairs)
+    for r1 in primitive_rules:
+        for r2 in primitive_rules:
+            if r1 is r2:
+                continue
+            candidates.append(Program(rules=[r1, r2]))
+
+    return candidates
